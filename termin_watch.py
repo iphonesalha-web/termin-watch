@@ -71,12 +71,23 @@ def setup_config():
     env_chat = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
     env_cut = os.environ.get("CUTOFF_DATE", "").strip()
 
+    # التاريخ يُقرأ دائماً من البيئة إن كان صالحاً
+    if re.match(r"^\d{4}-\d{2}-\d{2}$", env_cut):
+        CUTOFF_DATE = env_cut
+
     if env_token and env_chat:
         TELEGRAM_TOKEN = env_token
         TELEGRAM_CHAT_ID = env_chat
-        if re.match(r"^\d{4}-\d{2}-\d{2}$", env_cut):
-            CUTOFF_DATE = env_cut
         log("الإعدادات من متغيرات البيئة.")
+        return
+
+    if IN_CI:
+        missing = []
+        if not env_token:
+            missing.append("TELEGRAM_TOKEN")
+        if not env_chat:
+            missing.append("TELEGRAM_CHAT_ID")
+        log(f"تحذير: ناقص في Secrets: {', '.join(missing)} - لن تصل إشعارات Telegram.")
         return
 
     if os.path.exists(CONFIG_FILE):
@@ -89,10 +100,6 @@ def setup_config():
             return
         except Exception as e:
             log(f"config.json تالف ({e}) - سأسأل من جديد.")
-
-    if IN_CI:
-        log("تحذير: لا توجد إعدادات. أضف TELEGRAM_TOKEN و TELEGRAM_CHAT_ID في Secrets.")
-        return
 
     print("\n===== الإعداد الأول =====")
     print("(اضغط Enter لقبول القيمة بين القوسين)\n")
