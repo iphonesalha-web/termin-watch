@@ -1,0 +1,35 @@
+name: Termin Watch
+
+on:
+  # الأوقات بتوقيت UTC. ألمانيا شتاءً = UTC+1 ، صيفاً = UTC+2.
+  # 06:05 UTC = 07:05 بتوقيت ألمانيا (شتاءً).
+  schedule:
+    - cron: '5 6 * * 1-5'    # أيام العمل، صباحاً - وقت ظهور الإلغاءات
+  workflow_dispatch:          # زر تشغيل يدوي
+
+concurrency:
+  group: termin-watch
+  cancel-in-progress: false
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install deps
+        run: |
+          pip install -r requirements.txt
+          python -m playwright install --with-deps chromium
+
+      - name: Watch
+        env:
+          CUTOFF_DATE: ${{ vars.CUTOFF_DATE }}
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python termin_watch.py --loop-minutes 90
