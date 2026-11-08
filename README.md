@@ -25,3 +25,22 @@ python termin_watch.py
 ```
 
 يسألك أول مرة عن التاريخ وبيانات Telegram ويحفظها في `config.json`.
+
+## التشغيل على Raspberry Pi (24/7)
+
+بعد تنصيب Raspberry Pi OS 64-bit وتفعيل SSH:
+
+```
+curl -fsSL https://raw.githubusercontent.com/iphonesalha-web/termin-watch/main/pi_setup.sh -o pi_setup.sh
+bash pi_setup.sh
+```
+
+يسألك عن التاريخ وبيانات Telegram، ثم ينشئ خدمة systemd تعمل تلقائياً
+عند كل إقلاع وتعيد تشغيل نفسها إن توقفت.
+
+| العملية | الأمر |
+|---|---|
+| متابعة السجل | `journalctl -u termin-watch -f` |
+| إيقاف | `sudo systemctl stop termin-watch` |
+| تشغيل | `sudo systemctl start termin-watch` |
+| تغيير الإعدادات | `nano ~/termin-watch/termin.env` ثم `sudo systemctl restart termin-watch` |

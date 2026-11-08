@@ -319,7 +319,18 @@ def filter_slots(slots, cutoff, earliest, latest):
 def check_once(headless=True, debug=False, seen=None):
     seen = seen if seen is not None else set()
     with sync_playwright() as pw:
-        browser = pw.chromium.launch(headless=headless)
+        # على Raspberry Pi نستخدم Chromium المثبّت من النظام (Playwright لا ينزّله لـ ARM)
+        launch_args = {"headless": headless}
+        chrome_path = os.environ.get("CHROMIUM_PATH", "").strip()
+        if not chrome_path:
+            for cand in ("/usr/bin/chromium", "/usr/bin/chromium-browser"):
+                if os.path.exists(cand):
+                    chrome_path = cand
+                    break
+        if chrome_path:
+            launch_args["executable_path"] = chrome_path
+            launch_args["args"] = ["--no-sandbox", "--disable-dev-shm-usage"]
+        browser = pw.chromium.launch(**launch_args)
         ctx = browser.new_context(locale="de-DE")
         page = ctx.new_page()
         try:
