@@ -44,3 +44,13 @@ bash pi_setup.sh
 | إيقاف | `sudo systemctl stop termin-watch` |
 | تشغيل | `sudo systemctl start termin-watch` |
 | تغيير الإعدادات | `nano ~/termin-watch/termin.env` ثم `sudo systemctl restart termin-watch` |
+
+## التحكم من الآيفون (اختياري)
+
+`pi_setup.sh` يشغّل أيضاً واجهة تحكم صغيرة (`pi_api.py`، المنفذ 8787) محمية بكلمة سر تظهر في نهاية التنصيب
+(أو: `grep API_TOKEN ~/termin-watch/api.env`). تطبيق iOS في المجلد `ios/` يتصل بها ويعرض:
+الحالة، آخر فحص، أقرب المواعيد، السجل، ويسمح بتغيير التاريخ وتشغيل/إيقاف/إعادة تشغيل المراقب.
+
+- البناء: GitHub Actions (`ios.yml`) ينتج `TerminPi.ipa` غير موقّع في صفحة Releases → وقّعه في ESign وثبّته.
+- من خارج البيت: ثبّت Tailscale (يعرضه `pi_setup.sh`) واستخدم عنوان `100.x.x.x:8787`.
+- لا تفتح المنفذ 8787 في الراوتر أبداً.

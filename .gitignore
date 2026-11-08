@@ -1,4 +1,6 @@
 config.json
 termin_seen.json
+termin_status.json
+termin.env
 last_page.html
 __pycache__/

@@ -140,6 +140,27 @@ def load_seen():
     return set()
 
 
+STATUS_FILE = "termin_status.json"
+
+
+def write_status(**kw):
+    """يحفظ آخر حالة (لتقرأها واجهة التحكم على الـ Pi). لا يعمل على GitHub."""
+    if IN_CI:
+        return
+    try:
+        data = {}
+        if os.path.exists(STATUS_FILE):
+            with open(STATUS_FILE, encoding="utf-8") as f:
+                data = json.load(f)
+        data.update(kw)
+        tmp = STATUS_FILE + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=1)
+        os.replace(tmp, STATUS_FILE)
+    except Exception:
+        pass
+
+
 def save_seen(seen):
     if IN_CI:
         return
@@ -340,12 +361,19 @@ def check_once(headless=True, debug=False, seen=None):
             ctx.close()
             browser.close()
 
+    now_s = dt.datetime.now().isoformat(timespec="seconds")
     if not slots:
         log("لم أجد أي مواعيد متاحة إطلاقاً (أو تغيّرت بنية الصفحة).")
+        write_status(last_check=now_s, ok=True, total=0, earliest=None,
+                     cutoff=CUTOFF_DATE, error=None, upcoming={})
         return
 
     total = sum(len(v) for v in slots.values())
     log(f"{total} موعد متاح في {len(slots)} يوم | أقرب يوم: {min(slots)}")
+    first_days = sorted(slots)[:7]
+    write_status(last_check=now_s, ok=True, total=total, earliest=min(slots),
+                 cutoff=CUTOFF_DATE, error=None,
+                 upcoming={d: slots[d][:6] for d in first_days})
 
     matches = filter_slots(slots, CUTOFF_DATE, EARLIEST_TIME, LATEST_TIME)
     new = []
@@ -407,6 +435,8 @@ def main():
             except Exception as e:
                 fails += 1
                 log(f"خطأ: {e}")
+                write_status(last_check=dt.datetime.now().isoformat(timespec="seconds"),
+                             ok=False, error=str(e)[:300])
         else:
             log("خارج ساعات الفحص.")
 

@@ -75,6 +75,53 @@ UNIT
 sudo systemctl daemon-reload
 sudo systemctl enable --now termin-watch
 
+# ---------- واجهة التحكم (للتطبيق على الآيفون) ----------
+echo "==> واجهة التحكم (API)"
+if [ ! -f "$APP_DIR/api.env" ]; then
+  TOKEN=$(python3 -c "import secrets;print(secrets.token_hex(16))")
+  echo "API_TOKEN=$TOKEN" > "$APP_DIR/api.env"
+  chmod 600 "$APP_DIR/api.env"
+fi
+
+# السماح لواجهة التحكم بتشغيل/إيقاف خدمة المراقب فقط (بدون كلمة سر)
+echo "$USER ALL=(root) NOPASSWD: /usr/bin/systemctl start termin-watch, /usr/bin/systemctl stop termin-watch, /usr/bin/systemctl restart termin-watch" \
+  | sudo tee /etc/sudoers.d/termin-api > /dev/null
+sudo chmod 440 /etc/sudoers.d/termin-api
+sudo visudo -c -f /etc/sudoers.d/termin-api > /dev/null || { sudo rm -f /etc/sudoers.d/termin-api; echo "!! خطأ في sudoers"; exit 1; }
+
+sudo tee /etc/systemd/system/termin-api.service > /dev/null <<UNIT
+[Unit]
+Description=Termin Watch control API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=$USER
+WorkingDirectory=$APP_DIR
+EnvironmentFile=$APP_DIR/api.env
+ExecStart=/usr/bin/python3 $APP_DIR/pi_api.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+sudo systemctl daemon-reload
+sudo systemctl enable --now termin-api
+sudo systemctl restart termin-api
+
+# ---------- Tailscale (اختياري: للوصول من خارج البيت) ----------
+if ! command -v tailscale >/dev/null 2>&1; then
+  read -rp "تثبيت Tailscale للتحكم من خارج البيت؟ [y/N]: " TS
+  if [ "${TS:-n}" = "y" ] || [ "${TS:-n}" = "Y" ]; then
+    curl -fsSL https://tailscale.com/install.sh | sh
+    echo "افتح الرابط الذي سيظهر الآن لتسجيل الدخول:"
+    sudo tailscale up
+  fi
+fi
+IPADDR=$(hostname -I | awk '{print $1}')
+
 echo
 echo "================================================"
 echo " تم! الخدمة تعمل وستبدأ تلقائياً عند كل إقلاع."
@@ -82,6 +129,12 @@ echo
 echo " متابعة السجل:   journalctl -u termin-watch -f"
 echo " إيقاف:          sudo systemctl stop termin-watch"
 echo " تشغيل:          sudo systemctl start termin-watch"
+echo
+echo " === بيانات الاتصال بالتطبيق ==="
+echo " العنوان:   http://$IPADDR:8787   (أو http://pi.local:8787)"
+echo " كلمة السر: $(grep API_TOKEN "$APP_DIR/api.env" | cut -d= -f2)"
+echo " (تُعرض لاحقاً بالأمر: grep API_TOKEN $APP_DIR/api.env)"
+echo
 echo " تغيير التاريخ:  nano $APP_DIR/termin.env ثم"
 echo "                 sudo systemctl restart termin-watch"
 echo "================================================"
