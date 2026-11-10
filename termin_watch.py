@@ -46,7 +46,26 @@ JITTER_SECONDS = 30
 
 # ساعات الفحص بالتوقيت المحلي للجهاز. None = طوال اليوم.
 # على GitHub تُلغى تلقائياً لأن السيرفر بتوقيت UTC والجدولة تتكفّل بالتوقيت.
-ACTIVE_HOURS = (6, 21)
+ACTIVE_HOURS = None  # طوال اليوم (24 ساعة)
+
+
+def _hours_from_env(default):
+    """ACTIVE_HOURS=6-21 في termin.env لتحديد ساعات معيّنة، أو all لطوال اليوم."""
+    v = os.environ.get("ACTIVE_HOURS", "").strip().lower()
+    if not v:
+        return default
+    if v in ("all", "24", "0-24"):
+        return None
+    try:
+        a, b = (int(x) for x in v.split("-"))
+        if 0 <= a < b <= 24:
+            return (a, b)
+    except ValueError:
+        pass
+    return default
+
+
+ACTIVE_HOURS = _hours_from_env(ACTIVE_HOURS)
 
 IN_CI = bool(os.environ.get("GITHUB_ACTIONS"))
 
